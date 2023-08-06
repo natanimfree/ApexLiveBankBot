@@ -1,3 +1,5 @@
+from telebot.types import BotCommand
+
 import config
 from telebot import TeleBot, util, apihelper, types
 from database import User, BotSetting, Permission
@@ -5,15 +7,20 @@ import keyboards
 from datetime import datetime
 import re
 from telebot.custom_filters import ForwardFilter
-import sched
 import time
 import threading
+import schedule
 
+PROFITS = {
+    30: 3, 40: 4, 50: 5.5, 100: 8.5, 150: 11.5, 200: 13.5, 250: 15.5, 300: 18.5,
+    400: 22.8, 500: 27.8, 800: 34.8, 1000: 45.8
+}
+
+event = schedule.Scheduler()
 
 apihelper.ENABLE_MIDDLEWARE = True
 bot = TeleBot(config.TOKEN, parse_mode="HTML", num_threads=5)
 markups = {}
-event = sched.scheduler(time.time, time.sleep)
 
 
 def user_joined(user_id: int, channel_id):
@@ -254,7 +261,7 @@ def on_main_keyboards(message):
     bot.delete_state(user_id)
 
     if text == "💰 الاستثمار":
-        btns = ["💸 50٪ ، ~ بعد 24 ساعة", "💸 80٪ ، ~ بعد 3 أيام", "💸 120٪ ، ~ بعد 7 أيام", "🔙  Back"]
+        btns = keyboards.invest_keyboard_texts
         btn = types.ReplyKeyboardMarkup(row_width=1)
         btn.add(*[types.KeyboardButton(text) for text in btns])
         bot.send_message(user_id, "<b>:اختر خيارًا واحدًا:</b>", reply_markup=btn)
@@ -320,49 +327,92 @@ def on_invest(message: types.Message):
     user_id = message.from_user.id
     text = message.text
     bot.delete_state(user_id)
-    msg = '''الحد الأدنى للاستثمار هو $ {} 💰
-الحد الأقصى للاستثمار هو $ {} 💰
+    if text == "⏰الباقة VIP 1️⃣":
+        opts = [30, 40, 50, 100]
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+        kb.add(*[f"${i}" for i in opts], "❌ Cancel")
 
-⏱ {}٪ سيتم إيداع ربح داخل {} ⌛️
+        bot.send_message(user_id, """☀️الباقة VlP1⃣
 
-يضاف الرصيد إلى الحساب بعد الإيداع
+✔️باقه 30$  سوف تحصل على ربح يومي قدره 3$ كل يوم 📆
 
-⚠️ إذا أرسلت أقل من {} دولار أمريكي ، فسيتم رفض إيداعك!
+✔️باقه 40$  سوف تحصل على ربح يومي قدره 4$ كل يوم 📆
 
-✅ أرسل المبلغ الذي تريد استثماره
-'''
-    if text == "💸 50٪ ، ~ بعد 24 ساعة":
-        msg = msg.format(30, 2000, 50, "عد 24", 30)
-        _min, _max, req_hr, per = 30, 2000, 24, 50
-        bot.send_message(user_id, msg, reply_markup=keyboards.cancel())
-    elif text == "💸 80٪ ، ~ بعد 3 أيام":
-        msg = msg.format(50, 4000, 80, "عد 3", 50)
-        _min, _max, req_hr, per = 50, 4000, 24 * 3, 80
-        bot.send_message(user_id, msg, reply_markup=keyboards.cancel())
-    elif text == "💸 120٪ ، ~ بعد 7 أيام":
-        msg = msg.format(100, 10000, 120, "عد 7", 100)
-        _min, _max, req_hr, per = 100, 10000, 24*7, 120
-        bot.send_message(user_id, msg, reply_markup=keyboards.cancel())
+ ✔️باقه 50$  سوف تحصل على ربح يومي قدره 5.5$ كل يوم 📆
+
+  ✔️باقه 100$  سوف تحصل على ربح يومي قدره 8.5$ كل يوم 📆
+ 
+...
+ 
+👀السحب ابتداءا من 10 دولار  🕙
+
+📢سوف تتوصل بالسحب في أقل من ساعة ⏰
+
+
+🔔السحب و الإيداع عن طريق عملة USDT او USD بايير ✌️""", reply_markup=kb)
+
+    elif text == "⏰الباقة VIP 2️⃣":
+        opts = [150, 200, 250, 300]
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+        kb.add(*[f"${i}" for i in opts], "❌ Cancel")
+
+        bot.send_message(user_id, """الباقة VIP 2️⃣
+
+✔️باقه 150$  سوف تحصل على ربح يومي قدره 11.5$ كل يوم 📆
+
+✔️باقه 200$  سوف تحصل على ربح يومي قدره 13.5$ كل يوم 📆
+
+✔️باقه 250$  سوف تحصل على ربح يومي قدره 15.5$ كل يوم 📆
+
+✔️باقه 300$  سوف تحصل على ربح يومي قدره 18.5$ كل يوم📆
+
+
+👀السحب ابتداءا من 10 دولار  🕙
+
+📢سوف تتوصل بالسحب في أقل من ساعة ⏰
+
+
+🔔السحب و الإيداع عن طريق عملة USDT او USD بايير ✌️""", reply_markup=kb)
+    elif text == "⏰الباقة VIP 3️⃣":
+        opts = [400, 500, 800, 1000]
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+        kb.add(*[f"${i}" for i in opts], "❌ Cancel")
+        bot.send_message(user_id, """الباقة VIP 3️⃣
+
+✔️باقه 400$  سوف تحصل على ربح يومي قدره 22.8$ كل يوم 📆
+
+✔️باقه 500$  سوف تحصل على ربح يومي قدره 27.8$ كل يوم 📆
+
+✔️باقه 800$  سوف تحصل على ربح يومي قدره 34.8$ كل يوم 📆
+
+✔️باقه 1000$  سوف تحصل على ربح يومي قدره 45.8$ كل يوم📆
+
+
+👀السحب ابتداءا من 10 دولار  🕙
+
+📢سوف تتوصل بالسحب في أقل من ساعة ⏰
+
+
+🔔السحب و الإيداع عن طريق عملة USDT او USD بايير ✌️""", reply_markup=kb)
     else:
         return start(message)
 
     bot.set_state(user_id, "invest")
     with bot.retrieve_data(user_id) as data:
-        data['minimum'] = _min
-        data['maximum'] = _max
-        data['hours'] = req_hr
-        data['percentage'] = per
+        data['options'] = opts
 
 
 @bot.message_handler(state='invest')
 def on_invest(message: types.Message):
     user_id = message.from_user.id
     with bot.retrieve_data(user_id) as data:
-        if not message.text.isdigit():
-            bot.send_message(user_id, "Number required!")
+        opts = data['options']
+        txt = message.text[1:]
+        if not txt.isdigit():
+            bot.send_message(user_id, "Use the bellow button only!")
             return bot.set_state(user_id, 'invest')
-        elif int(message.text) > data['maximum'] or int(message.text) < data['minimum']:
-            bot.send_message(user_id, "Above or below the limit.")
+        elif not int(txt) in opts:
+            bot.send_message(user_id, "Use the bellow button only!")
             return bot.set_state(user_id, 'invest')
         else:
             payeer = BotSetting().payeer
@@ -379,7 +429,7 @@ def on_invest(message: types.Message):
     bot.set_state(user_id, 'screenshoot')
 
     with bot.retrieve_data(user_id) as data:
-        data['amount'] = int(message.text)
+        data['amount'] = int(txt)
 
 
 @bot.message_handler(state='screenshoot', content_types=util.content_type_media)
@@ -394,13 +444,11 @@ def get_screenshoot(message: types.Message):
         photo = message.photo[-1]
         msg = bot.send_message(user_id, "👍 Your request is sent to the bot admin.")
         with bot.retrieve_data(user_id) as data:
-            text = "<b>DEPOSIT REQUEST</b>\n\n<b>From</b>: {}\n<b>Amount</b>: ${}\n<b>Profit Percentage</b>: {}%\n" \
-                   "<b>Minimum Deposit</b>: ${}".format(util.user_link(message.from_user), data['amount'], data['percentage'], data['minimum'],
-                                                       )
+            text = "<b>DEPOSIT REQUEST</b>\n\n<b>From</b>: {}\n<b>Amount</b>: ${}\n<b>Profit</b>: {}\n" \
+                .format(util.user_link(message.from_user), data['amount'], PROFITS[data['amount']])
+
             text += "\n\n<i>🔰 If the user is sent the money to your wallet press ✅ Confirm button.</i>"
-            profit_amount = int((data['percentage'] * data['amount'])//100)
-            user.invest_history.append({"Amount": data['amount'], "Profit Percentage": data['percentage'],
-                                "Profit Amount": profit_amount, "Receive After": data['hours'],
+            user.invest_history.append({"Amount": data['amount'], "Profit Amount": PROFITS[data['amount']],
                                 "Status": "🔁 Pending", "Date": datetime.utcnow()
                 })
 
@@ -620,21 +668,17 @@ def on_confirmation(callback: types.CallbackQuery):
     user.invest += user.invest_history[id]['Amount']
     user.update(invest_history=user.invest_history, balance=user.balance, invest=user.invest)
     bot.edit_message_reply_markup(callback.from_user.id, callback.message.message_id)
-    event.enter(3600 * user.invest_history[id]["Receive After"], 1, 
-        get_profit, argument=(user, msg_id, id))
     bot.send_message(user_id, text, reply_to_message_id=msg_id)
 
 
-def get_profit(user: User, msg_id: int, id: int):
+def get_profit(user: User, id: int):
     invest = user.invest_history[id]
-    user.balance += invest['Profit Amount']
-    invest["Received Profit"] = invest['Profit Amount']
-    invest["Received Date"] = datetime.utcnow()
+    user.balance += PROFITS[invest['Amount']]
     user.invest_history[id] = invest
     user.update(balance=user.balance, invest_history=user.invest_history)
     bot.send_message(user.id, "<i>✅ You have successfully received <b>${}</b></i>"
-                              " profit of your <b>${}</b> deposit.".format(invest['Profit Amount'], invest['Amount']),
-                     reply_to_message_id=msg_id)
+                              " profit of your <b>${}</b> deposit.".format(PROFITS[invest['Amount']], invest['Amount']),
+                     )
 
 
 class State:
@@ -1138,6 +1182,11 @@ def bot_stng_msg(user_id):
                      reply_markup=keyboards.bot_setting(admin))
 
 
+@bot.message_handler(commands=['developer'])
+def developer(msg):
+    bot.send_message(msg.chat.id, "📌 This bot is developed by:- @Natiprado\n\n<b>🌹 Full featured Telegram bot developer</b>")
+
+
 CHANNEL = """📣 <b>Channels</b>\n
 ✳ From this menu you can add or remove channel.\n
 ✅ You can also give permissions for your bot what the bot can do on these channel.\n
@@ -1184,9 +1233,30 @@ ADMINP = """🔧 Manage admin's permision\n
 ◽ Manage setting : {}
 """
 
+
+def check_for_investor():
+    users = User.find()
+    for u in users:
+        user = User(u.get("id"))
+        if not user.invest_history:
+            continue
+        else:
+            last_inv = user.invest_history[-1]
+            id = user.invest_history.index(last_inv)
+            if last_inv.get("Profit Percentage"): continue
+            elif not last_inv['Amount'] in PROFITS:
+                continue
+            else:
+                get_profit(user, id)
+
+
 def forever():
     while True:
-        event.run()
+        event.run_pending()
+
+
+event.every(1).day.at("06:00:00").do(check_for_investor)
+
 
 import filters
 from telebot.custom_filters import StateFilter
@@ -1196,9 +1266,9 @@ bot.add_custom_filter(StateFilter(bot))
 bot.add_custom_filter(ForwardFilter())
 
 event_sched = threading.Thread(target=forever)
+bot.set_my_commands([BotCommand('developer', "About the bot developer")])
 
 if __name__ == '__main__':
-    import os
     event_sched.start()
     bot.infinity_polling(skip_pending=False)
     

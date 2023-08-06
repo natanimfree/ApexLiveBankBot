@@ -5,7 +5,8 @@ from telebot import types
 
 main_keyboard_texts = ["💰 الاستثمار", "💳 سحب", "📈 احصائيات", "👤 الحساب", "📋 معلومات", "🛠 الدعم"]
 admin_keyboard_texts = []
-invest_keyboard_texts = ["💸 50٪ ، ~ بعد 24 ساعة", "💸 80٪ ، ~ بعد 3 أيام", "💸 120٪ ، ~ بعد 7 أيام", "🔙  Back"]
+invest_keyboard_texts = ["⏰الباقة VIP 1️⃣", "⏰الباقة VIP 2️⃣", "⏰الباقة VIP 3️⃣", "🔙  Back"]
+
 
 def main_keyboard(user: User):
     kbd = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True, row_width=2)
@@ -26,10 +27,12 @@ def cancel():
     kbd.add(KeyboardButton("❌ Cancel"))
     return kbd
 
+
 def icancel():
     kbd = types.InlineKeyboardMarkup()
     kbd.add(InlineKeyboardButton("❌ Cancel", callback_data='cancel'))
     return kbd
+
 
 def members_button(max_id: int, curret_row: int):
     btn = types.InlineKeyboardMarkup(row_width=5)
