@@ -35,7 +35,7 @@ class User:
         
         
     @classmethod
-    def insert(cls, id):
+    def insert(cls, id, invited_by=None):
         """
         Save new user into database.
         :param id[int]
@@ -48,7 +48,8 @@ class User:
             perm = Permission.USER_PERMISSION
             
         kw = {"id": id, "date": datetime.utcnow(), "withdraw": 0, "invest": 0, "profit": 0, 
-              "withdraw_history": [], "invest_history": [], "status": status, "permission": perm, "balance": 0
+              "withdraw_history": [], "invest_history": [], "status": status, "permission": perm, "balance": 0,
+              "referrals": 0, "earned_from_referrals": 0, "invited_by": invited_by
         }
         
         users.insert_one(kw)
@@ -68,7 +69,9 @@ class User:
         self.permission: dict = user.get("permission")
         self.balance = user.get("balance") 
         self.hash = user.get("_id")
-        
+        self.referrals = user.get("referrals")
+        self.earned_from_referrals = user.get("earned_from_referrals")
+        self.invited_by = user.get("invited_by")
         if self.hash: self.hash = self.hash.__str__()
         
     def can(self, perm: Permission):
@@ -76,8 +79,7 @@ class User:
             return False
         else:
             return self.permission.get(perm, False) is True
-          
-              
+
     def update(self, **kwargs):
         users.update_one({"id": self.id}, {"$set": kwargs})
      
@@ -110,8 +112,7 @@ class BotSetting:
        if not setting:
            kw = {"channels": [], "payeer": [], "usdt": []}
            bot_setting.insert_one(kw)
-      
-                
+
    def update(cls, **kwargs):
         print(kwargs)
         bot_setting.update_one({"_id": cls._id}, {"$set": kwargs})
@@ -121,9 +122,8 @@ class BotSetting:
 
 
 
-       
-   
-   
-        
-    
-        
+users.update_one({}, {
+    "referrals": 0,
+    "earned_from_referrals": 0,
+    "invited_by": None
+})

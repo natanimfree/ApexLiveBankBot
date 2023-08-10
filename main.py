@@ -21,6 +21,7 @@ event = schedule.Scheduler()
 apihelper.ENABLE_MIDDLEWARE = True
 bot = TeleBot(config.TOKEN, parse_mode="HTML", num_threads=5)
 markups = {}
+DEEPLINK = "https://t.me/{}?start=".format(bot.get_me().username)
 
 
 def user_joined(user_id: int, channel_id):
@@ -73,7 +74,7 @@ def get_updates(self, message):
             force_channels = setting.channels
             for channel in force_channels:
                 
-                if not channel.get('force_join'): return
+                if not channel.get('force_join'): continue
                 if not user_joined(message.from_user.id, channel['id']):
                     message.content_type = 'not_joined'
                     break
@@ -85,8 +86,24 @@ def start(message: types.Message):
     user_id = message.from_user.id
     bot.delete_state(user_id)
     db_user = User(user_id)
-    
-    if not db_user.exist():
+    text = message.text
+    is_invited = False
+    if len(text.split()) > 1:
+        new_text = "".join(text.split()[1:])
+        if new_text.startswith(u'i'):
+            try:
+                ui = int(new_text[1:])
+            except:
+                pass
+            else:
+                inv_user = User(ui)
+                if inv_user.exist() and not db_user.exist():
+                    User.insert(user_id, ui)
+                    inv_user.referrals += 1
+                    inv_user.update(referrals=inv_user.referrals)
+                    is_invited = True
+
+    if not db_user.exist() and not is_invited:
         User.insert(user_id)
     text = """مرحبًا بك 👋 هنا يمكنك بدء استثمار جديد!
 
@@ -268,7 +285,7 @@ def on_main_keyboards(message):
 
     elif text == "💳 سحب":
         if user.balance > 0:
-            text = f"💵 الرصيد الحالي : {user.balance}\n\n❓ما المبلغ الذي تريد سحبه؟"
+            text = f"💵 الرصيد الحالي : {user.balance}\n⚠️ الحد الأدنى للسحب: $10 دولارات\n\n❓ما المبلغ الذي تريد سحبه؟"
             bot.send_message(user_id, text, reply_markup=keyboards.cancel())
             bot.set_state(user_id, "withdraw")
         else:
@@ -291,7 +308,15 @@ def on_main_keyboards(message):
 
 📆 انضم  {}""".format(user.balance, user.invest, user.withdraw, user.date)
         bot.send_message(user_id, msg, reply_markup=keyboards.profile_btn())
+    elif text == "💸 الإحالات":
+        msg = """💸 إجمالي الإحالات: {}
+💵 المكتسبة من الإحالات: $ {}
 
+<i>🔆 تكسب 3 دولارات من كل وديعة من إحالاتك.</i>
+
+<b>✅ رابط الإحالة الخاص بك هو: {}</b>
+"""
+        bot.send_message(user_id, msg.format(user.referrals, user.earned_from_referrals, DEEPLINK+'i'+str(user_id)))
     elif text == "📋 معلومات":
         msg = """* الحالة: ✅ الدفع
 
@@ -472,8 +497,8 @@ def on_withdraw(message):
     if not message.text.isdigit():
         bot.send_message(user_id, "Number required!")
         return bot.set_state(user_id, 'withdraw')
-    elif int(message.text) > user.balance or int(message.text) <= 0:
-        text = f"💵 الرصيد الحالي : {user.balance}\n\n❓ ما المبلغ الذي تريد سحبه؟"
+    elif int(message.text) > user.balance or int(message.text) < 10:
+        text = f"💵 الرصيد الحالي : {user.balance}\n❓ ما المبلغ الذي تريد سحبه؟\n⚠️ الحد الأدنى للسحب: $10 دولارات"
         bot.send_message(user_id, text, reply_markup=keyboards.cancel())
     else:
         kbd = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
@@ -652,11 +677,21 @@ def on_confirmation(callback: types.CallbackQuery):
     data, user_id, id, msg_id = callback.data.split(":")[1:]
     user_id, id, msg_id = int(user_id), int(id), int(msg_id)
     user = User(user_id)
-
+    invited = False
+    if user.invited_by:
+        invited_user = User(user.invited_by)
+        invited_user.earned_from_referrals += 3
+        invited_user.balance += 3
+        invited_user.update(earned_from_referrals=invited_user.earned_from_referrals, balance=invited_user.balance)
+        invited = True
     if data == "confirm":
         status = "✅ Confirmed"
         text = "<b>👍 Congra</b>\n\n<i>Your deposit is confirmed</i>"
-        user.balance += user.invest_history[id]["Amount"]
+        if invited:
+            balance = (user.invest_history[id]["Amount"] - 3)
+        else:
+            balance = user.invest_history[id]["Amount"]
+        user.balance += balance
     else:
         status = "❌ Declined"
         text = "<b>😔 Sorry</b>\n\n<i>Your deposit could not be confirmed</i>."
@@ -1266,7 +1301,6 @@ bot.add_custom_filter(StateFilter(bot))
 bot.add_custom_filter(ForwardFilter())
 
 event_sched = threading.Thread(target=forever)
-bot.set_my_commands([BotCommand('developer', "About the bot developer")])
 
 if __name__ == '__main__':
     event_sched.start()
