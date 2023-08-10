@@ -99,31 +99,26 @@ class User:
 
 
 class BotSetting:
-   def __init__(self):
+    def __init__(self):
        setting = bot_setting.find_one({})
        self.channels: list[dict] = setting.get("channels")
        self.payeer: list[str] = setting.get("payeer")
        self.usdt: list[str] = setting.get("usdt")
        self._id = setting.get("_id")
-        
-   @staticmethod
-   def insert():
-       setting = bot_setting.find_one({}) 
+
+    @staticmethod
+    def insert():
+       setting = bot_setting.find_one({})
        if not setting:
            kw = {"channels": [], "payeer": [], "usdt": []}
            bot_setting.insert_one(kw)
 
-   def update(cls, **kwargs):
+    def update(cls, **kwargs):
         print(kwargs)
         bot_setting.update_one({"_id": cls._id}, {"$set": kwargs})
-   
-   def __str__(self):
+
+    def __str__(self):
         return str(bot_setting.find_one({}))
 
 
 
-users.update_one({}, {
-    "referrals": 0,
-    "earned_from_referrals": 0,
-    "invited_by": None
-})

@@ -486,6 +486,7 @@ def get_screenshoot(message: types.Message):
                                                                           callback_data='confirmation:decline:%d:%d:%d' % (user_id, id, msg.message_id))
                                              ]])
             bot.send_photo(config.ADMIN_ID, photo.file_id, caption=text, reply_markup=btn)
+            message.text = 'start'
         start(message)
 
 
