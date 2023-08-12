@@ -1302,7 +1302,7 @@ bot.add_custom_filter(StateFilter(bot))
 bot.add_custom_filter(ForwardFilter())
 
 event_sched = threading.Thread(target=forever)
-
+bot.delete_my_commands()
 if __name__ == '__main__':
     event_sched.start()
     bot.infinity_polling(skip_pending=False)
